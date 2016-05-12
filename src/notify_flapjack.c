@@ -47,6 +47,7 @@ struct fj_node_s
   int port;
   struct timeval timeout;
   int database;
+  int flapjack_version;
 
   redisContext *conn;
   pthread_mutex_t lock;
@@ -151,7 +152,7 @@ int generate_event(char *buffer, size_t buffer_size, const char *host_name, char
                                 "\"tags\":[%s],"                       // tags
                                 "\"initial_failure_delay\":%lu,"       // initial_failure_delay
                                 "\"repeat_failure_delay\":%lu,"        // repeat_failure_delay
-                                "\"initial_recovery_delay\":%lu,"      // initial_recovery_delay
+                                //"\"initial_recovery_delay\":%lu,"      // initial_recovery_delay
                                 "\"time\":%.0f"                        // TIMET
                             "}",
                                 escaped_host_name,
@@ -162,7 +163,7 @@ int generate_event(char *buffer, size_t buffer_size, const char *host_name, char
                                 tags,
                                 initial_failure_delay,
                                 repeat_failure_delay,
-                                initial_recovery_delay,
+                                //initial_recovery_delay,
                                 event_time);
 
     sfree(escaped_host_name);
@@ -230,9 +231,17 @@ static int flapjack_push (char const *buffer, user_data_t *ud) /* {{{ */
 
   rr = redisCommand (node->conn, "LPUSH %s %s", "events", buffer);
   if (rr == NULL)
-    WARNING("notify_flapjack plugin: %s:%d:%d LPUSH command error. message:%s", node->host, node->port, node->database, node->conn->errstr);
+    WARNING("notify_flapjack plugin: %s:%d:%d LPUSH command error (events). message:%s", node->host, node->port, node->database, node->conn->errstr);
   else
     freeReplyObject (rr);
+
+  if ( node->flapjack_version > 1) {
+    rr = redisCommand (node->conn, "LPUSH events_actions +");
+    if (rr == NULL)
+      WARNING("notify_flapjack plugin: %s:%d:%d LPUSH command error (events_actions). message:%s", node->host, node->port, node->database, node->conn->errstr);
+    else
+      freeReplyObject (rr);
+  }
 
   pthread_mutex_unlock (&node->lock);
 
@@ -312,6 +321,7 @@ static int fj_config_node (oconfig_item_t *ci) /* {{{ */
   node->timeout.tv_usec = 1000;
   node->conn = NULL;
   node->database = 0;
+  node->flapjack_version = 2;
   pthread_mutex_init (&node->lock, /* attr = */ NULL);
 
   status = cf_util_get_string_buffer (ci, node->name, sizeof (node->name));
@@ -342,6 +352,9 @@ static int fj_config_node (oconfig_item_t *ci) /* {{{ */
     }
     else if (strcasecmp ("Database", child->key) == 0) {
       status = cf_util_get_int (child, &node->database);
+    }
+    else if (strcasecmp ("Flapjack_Version", child->key) == 0) {
+      status = cf_util_get_int (child, &node->flapjack_version);
     }
     else
       WARNING ("notify_flapjack plugin: Ignoring unknown config option \"%s\".",

@@ -4483,6 +4483,64 @@ Default: C<Collectd notify: %s@%s>
 
 =back
 
+=head2 Plugin C<notify_flapjack>
+
+The I<notify_flapjack> plugin writes notifications to Flapjacks I<redis database> directly
+to the I<events> queue.
+
+Synopsis:
+
+  <Plugin "notify_flapjack">
+    <Node "example">
+        Host "localhost"
+        Port "6379"
+        Timeout 1000
+        Database 0
+    </Node>
+  </Plugin>
+
+Notifications are pushed to the I<events queue>, just as Flapjack expects them.
+You can specify the database to use with the B<Database> parameter (default is C<0>). 
+See L<http://flapjack.io/> for reference.
+
+The information shown in the synopsis above is the I<default configuration>
+which is used by the plugin if no configuration is present.
+
+The plugin can send values to multiple instances of I<Redis> by specifying
+one B<Node> block for each instance. Within the B<Node> blocks, the following
+options are available:
+
+=over 4
+
+=item B<Node> I<Nodename>
+
+The B<Node> block identifies a new I<Redis> node, that is a new I<Redis>
+instance running on a specified host and port. The node name is a
+canonical identifier which is used as I<plugin instance>. It is limited to
+51E<nbsp>characters in length.
+
+=item B<Host> I<Hostname>
+
+The B<Host> option is the hostname or IP-address where the I<Redis> instance is
+running on.
+
+=item B<Port> I<Port>
+
+The B<Port> option is the TCP port on which the Redis instance accepts
+connections. Either a service name of a port number may be given. Please note
+that numerical port numbers must be given as a string, too.
+
+=item B<Timeout> I<Milliseconds>
+
+The B<Timeout> option sets the socket connection timeout, in milliseconds.
+
+=item B<Database> I<Index>
+
+This index selects the redis database to use for writing operations. Defaults
+to C<0>.
+
+=back
+
 =head2 Plugin C<notify_nagios>
 
 The I<notify_nagios> plugin writes notifications to Nagios' I<command file> as

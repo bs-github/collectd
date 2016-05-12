@@ -737,6 +737,14 @@ notify_email_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 notify_email_la_LIBADD = $(PTHREAD_LIBS) -lesmtp -lssl -lcrypto
 endif
 
+if BUILD_PLUGIN_NOTIFY_FLAPJACK
+pkglib_LTLIBRARIES += notify_flapjack.la
+notify_flapjack_la_SOURCES = notify_flapjack.c
+notify_flapjack_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBHIREDIS_LDFLAGS)
+notify_flapjack_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBHIREDIS_CPPFLAGS)
+notify_flapjack_la_LIBADD = -lhiredis
+endif
+
 if BUILD_PLUGIN_NOTIFY_NAGIOS
 pkglib_LTLIBRARIES += notify_nagios.la
 notify_nagios_la_SOURCES = notify_nagios.c

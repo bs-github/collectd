@@ -134,6 +134,7 @@ static long            write_limit_high = 0;
 static long            write_limit_low = 0;
 
 static derive_t        stats_values_dropped = 0;
+static derive_t        stats_notifications_dispatched = 0;
 static _Bool           record_statistics = 0;
 
 /*
@@ -180,6 +181,15 @@ static void plugin_update_internal_statistics (void) { /* {{{ */
 	vl.values[0].derive = (derive_t) stats_values_dropped;
 	sstrncpy (vl.type, "derive", sizeof (vl.type));
 	sstrncpy (vl.type_instance, "dropped", sizeof (vl.type_instance));
+	plugin_dispatch_values (&vl);
+
+	/* Notifications */
+	sstrncpy (vl.plugin_instance, "notifications",
+			sizeof (vl.plugin_instance));
+
+	vl.values[0].derive = (derive_t) stats_notifications_dispatched;
+	sstrncpy (vl.type, "derive", sizeof (vl.type));
+	sstrncpy (vl.type_instance, "dispatched", sizeof (vl.type_instance));
 	plugin_dispatch_values (&vl);
 
 	/* Cache */
@@ -2434,6 +2444,8 @@ int plugin_dispatch_multivalue (value_list_t const *template, /* {{{ */
 
 int plugin_dispatch_notification (const notification_t *notif)
 {
+	static pthread_mutex_t statistics_lock = PTHREAD_MUTEX_INITIALIZER;
+
 	llentry_t *le;
 	/* Possible TODO: Add flap detection here */
 
@@ -2441,6 +2453,12 @@ int plugin_dispatch_notification (const notification_t *notif)
 			"time = %.3f; host = %s;",
 			notif->severity, notif->message,
 			CDTIME_T_TO_DOUBLE (notif->time), notif->host);
+
+	if(record_statistics) {
+		pthread_mutex_lock(&statistics_lock);
+		stats_notifications_dispatched++;
+		pthread_mutex_unlock(&statistics_lock);
+	}
 
 	/* Nobody cares for notifications */
 	if (list_notification == NULL)

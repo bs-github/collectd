@@ -17,8 +17,6 @@ endif
 AM_CPPFLAGS += -DPLUGINDIR='"${pkglibdir}"'
 AM_CPPFLAGS += -DPKGDATADIR='"${pkgdatadir}"'
 
-AUTOMAKE_OPTIONS = subdir-objects
-
 noinst_LTLIBRARIES =
 check_PROGRAMS =
 TESTS =
@@ -55,11 +53,12 @@ sbin_PROGRAMS = collectdmon
 bin_PROGRAMS = collectd-nagios collectdctl collectd-tg
 
 collectdmon_SOURCES = collectdmon.c
-collectdmon_CPPFLAGS = $(AM_CPPFLAGS)
 
 collectd_nagios_SOURCES = collectd-nagios.c
-collectd_nagios_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/libcollectdclient/collectd -I$(top_builddir)/src/libcollectdclient/collectd
-collectd_nagios_LDADD =
+collectd_nagios_CPPFLAGS = $(AM_CPPFLAGS) \
+	-I$(top_srcdir)/src/libcollectdclient/collectd \
+	-I$(top_builddir)/src/libcollectdclient/collectd
+collectd_nagios_LDADD = libcollectdclient/libcollectdclient.la
 if BUILD_WITH_LIBSOCKET
 collectd_nagios_LDADD += -lsocket
 endif
@@ -67,26 +66,27 @@ if BUILD_AIX
 collectd_nagios_LDADD += -lm
 endif
 
-collectd_nagios_LDADD += libcollectdclient/libcollectdclient.la
-collectd_nagios_DEPENDENCIES = libcollectdclient/libcollectdclient.la
-
 
 collectdctl_SOURCES = collectdctl.c
-collectdctl_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/libcollectdclient/collectd -I$(top_builddir)/src/libcollectdclient/collectd
-collectdctl_LDADD =
+collectdctl_CPPFLAGS = $(AM_CPPFLAGS) \
+	-I$(top_srcdir)/src/libcollectdclient/collectd \
+	-I$(top_builddir)/src/libcollectdclient/collectd
+collectdctl_LDADD = libcollectdclient/libcollectdclient.la
 if BUILD_WITH_LIBSOCKET
 collectdctl_LDADD += -lsocket
 endif
 if BUILD_AIX
 collectdctl_LDADD += -lm
 endif
-collectdctl_LDADD += libcollectdclient/libcollectdclient.la
-collectdctl_DEPENDENCIES = libcollectdclient/libcollectdclient.la
+
 
 collectd_tg_SOURCES = collectd-tg.c
 collectd_tg_CPPFLAGS = $(AM_CPPFLAGS) \
-		       -I$(top_srcdir)/src/libcollectdclient/collectd -I$(top_builddir)/src/libcollectdclient/collectd
-collectd_tg_LDADD = daemon/libheap.la
+	-I$(top_srcdir)/src/libcollectdclient/collectd \
+	-I$(top_builddir)/src/libcollectdclient/collectd
+collectd_tg_LDADD = \
+	daemon/libheap.la \
+	libcollectdclient/libcollectdclient.la
 if BUILD_WITH_LIBSOCKET
 collectd_tg_LDADD += -lsocket
 endif
@@ -99,8 +99,6 @@ endif
 if BUILD_WITH_LIBPTHREAD
 collectd_tg_LDADD += $(PTHREAD_LIBS)
 endif
-collectd_tg_LDADD += libcollectdclient/libcollectdclient.la
-collectd_tg_DEPENDENCIES = libcollectdclient/libcollectdclient.la
 
 
 pkglib_LTLIBRARIES =
@@ -185,7 +183,6 @@ if BUILD_PLUGIN_BATTERY
 pkglib_LTLIBRARIES += battery.la
 battery_la_SOURCES = battery.c
 battery_la_LDFLAGS = $(PLUGIN_LDFLAGS)
-battery_la_LIBADD =
 if BUILD_WITH_LIBIOKIT
 battery_la_LDFLAGS += -framework IOKit
 endif
@@ -335,7 +332,9 @@ disk_la_CFLAGS += $(BUILD_WITH_LIBSTATGRAB_CFLAGS)
 disk_la_LIBADD += $(BUILD_WITH_LIBSTATGRAB_LDFLAGS)
 endif
 if BUILD_WITH_LIBUDEV
-disk_la_LIBADD += -ludev
+disk_la_CFLAGS += $(BUILD_WITH_LIBUDEV_CFLAGS)
+disk_la_LDFLAGS += $(BUILD_WITH_LIBUDEV_LDFLAGS)
+disk_la_LIBADD += $(BUILD_WITH_LIBUDEV_LIBS)
 endif
 if BUILD_FREEBSD
 disk_la_LIBADD += -ldevstat -lgeom
@@ -962,9 +961,9 @@ if BUILD_PLUGIN_SMART
 if BUILD_WITH_LIBUDEV
 pkglib_LTLIBRARIES += smart.la
 smart_la_SOURCES = smart.c
-smart_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBATASMART_CPPFLAGS)
-smart_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBATASMART_LDFLAGS)
-smart_la_LIBADD = $(BUILD_WITH_LIBATASMART_LIBS) -ludev
+smart_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBATASMART_CPPFLAGS) $(BUILD_WITH_LIBUDEV_CFLAGS)
+smart_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBATASMART_LDFLAGS) $(BUILD_WITH_LIBUDEV_LDFLAGS)
+smart_la_LIBADD = $(BUILD_WITH_LIBATASMART_LIBS) $(BUILD_WITH_LIBUDEV_LIBS)
 endif
 endif
 
@@ -1422,7 +1421,7 @@ if BUILD_PLUGIN_CEPH
 test_plugin_ceph_SOURCES = ceph_test.c
 test_plugin_ceph_CPPFLAGS = $(AM_CPPFLAGS) $(BUILD_WITH_LIBYAJL_CPPFLAGS)
 test_plugin_ceph_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBYAJL_LDFLAGS)
-test_plugin_ceph_LDADD = daemon/libcommon.la daemon/libplugin_mock.la $(BUILD_WITH_LIBYAJL_LIBS)
+test_plugin_ceph_LDADD = daemon/libplugin_mock.la $(BUILD_WITH_LIBYAJL_LIBS)
 check_PROGRAMS += test_plugin_ceph
 TESTS += test_plugin_ceph
 endif
